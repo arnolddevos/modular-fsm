@@ -239,4 +239,164 @@ mod tests {
         assert_eq!(se.transitioned_started_to_stopped, 1);
         assert_eq!(se.transitioned_stopped_to_started, 1);
     }
+
+    #[test]
+    fn test_step_alt() {
+        // Declare our state, commands and events
+
+        #[derive(Debug, PartialEq)]
+        enum State {
+            Started,
+            Stopped,
+        }
+
+        struct Start {}
+        struct Stop {}
+
+        #[derive(PartialEq, Debug)]
+        struct Started {}
+
+        #[derive(PartialEq, Debug)]
+        struct Stopped {}
+
+        // Declare an object to handle effects as we step through the FSM
+
+        struct EffectHandlers {
+            started: u32,
+            stopped: u32,
+            transitioned_stopped_to_started: u32,
+            transitioned_started_to_stopped: u32,
+        }
+
+        impl EffectHandlers {
+            pub fn start_something(&mut self) {
+                self.started += 1;
+            }
+
+            pub fn stop_something(&mut self) {
+                self.stopped += 1;
+            }
+
+            pub fn transitioned_started_to_stopped(&mut self) {
+                self.transitioned_started_to_stopped += 1;
+            }
+
+            pub fn transitioned_stopped_to_started(&mut self) {
+                self.transitioned_stopped_to_started += 1;
+            }
+        }
+
+        impl Command<State, EffectHandlers> for Start {
+            type Output = Started;
+            fn execute(&self, s: &State, se: &mut EffectHandlers) -> Option<Started> {
+                match s {
+                    State::Stopped => {
+                        se.start_something();
+                        Some(Started {})
+                    }
+                    _ => None,
+                }
+            }
+        }
+
+        impl Command<State, EffectHandlers> for Stop {
+            type Output = Stopped;
+            fn execute(&self, s: &State, se: &mut EffectHandlers) -> Option<Stopped> {
+                match s {
+                    State::Started => {
+                        se.stop_something();
+                        Some(Stopped {})
+                    }
+                    _ => None,
+                }
+            }
+        }
+
+        impl Event<State> for Started {
+            fn fire(&self, s: &State) -> Transition<State> {
+                match s {
+                    State::Stopped => Transition::Next(State::Started),
+                    _ => Transition::Same,
+                }
+            }
+        }
+
+        impl Event<State> for Stopped {
+            fn fire(&self, s: &State) -> Transition<State> {
+                match s {
+                    State::Started => Transition::Next(State::Stopped),
+                    _ => Transition::Same,
+                }
+            }
+        }
+
+        // Declare the FSM itself
+        struct MyFsm {}
+
+        impl Fsm<State, EffectHandlers> for MyFsm {
+            // Let's implement this optional function to show how entry/exit
+            // processing can be achieved, and also confirm that our FSM is
+            // calling it.
+            fn on_transition<C>(
+                old_s: &State,
+                new_s: &State,
+                _c: &C,
+                _e: &<C as super::Command<State, EffectHandlers>>::Output,
+                se: &mut EffectHandlers,
+            ) where
+                C: super::Command<State, EffectHandlers>,
+            {
+                match (old_s, new_s) {
+                    (State::Started, State::Stopped) => se.transitioned_started_to_stopped(),
+                    (State::Stopped, State::Started) => se.transitioned_stopped_to_started(),
+                    _ => {
+                        panic!("Unexpected transition");
+                    }
+                }
+            }
+        }
+
+        // Initialize our effect handlers
+
+        let mut se = EffectHandlers {
+            started: 0,
+            stopped: 0,
+            transitioned_stopped_to_started: 0,
+            transitioned_started_to_stopped: 0,
+        };
+
+        // Finally, test the FSM by stepping through various states
+
+        let (e, t) = MyFsm::step(&State::Stopped, &Start {}, &mut se);
+        assert_eq!(e, Some(Started {}));
+        assert_eq!(t, Transition::Next(State::Started));
+        assert_eq!(se.started, 1);
+        assert_eq!(se.stopped, 0);
+        assert_eq!(se.transitioned_started_to_stopped, 0);
+        assert_eq!(se.transitioned_stopped_to_started, 1);
+
+        let (e, t) = MyFsm::step(&State::Started, &Start {}, &mut se);
+        assert_eq!(e, None);
+        assert_eq!(t, Transition::Same);
+        assert_eq!(se.started, 1);
+        assert_eq!(se.stopped, 0);
+        assert_eq!(se.transitioned_started_to_stopped, 0);
+        assert_eq!(se.transitioned_stopped_to_started, 1);
+
+        let (e, t) = MyFsm::step(&State::Started, &Stop {}, &mut se);
+        assert_eq!(e, Some(Stopped {}));
+        assert_eq!(t, Transition::Next(State::Stopped));
+        assert_eq!(se.started, 1);
+        assert_eq!(se.stopped, 1);
+        assert_eq!(se.transitioned_started_to_stopped, 1);
+        assert_eq!(se.transitioned_stopped_to_started, 1);
+
+        let (e, t) = MyFsm::step(&&State::Stopped, &Stop {}, &mut se);
+        assert_eq!(e, None);
+        assert_eq!(t, Transition::Same);
+        assert_eq!(se.started, 1);
+        assert_eq!(se.stopped, 1);
+        assert_eq!(se.transitioned_started_to_stopped, 1);
+        assert_eq!(se.transitioned_stopped_to_started, 1);
+    }
 }
