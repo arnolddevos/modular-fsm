@@ -14,19 +14,26 @@ pub enum Transition<S> {
     Same,
 }
 
-/// How to operate on just part of the state
-trait Lens<S> {
-    fn extract(state: &S) -> &Self;
-    fn inject(self, state: &S) -> S;
+/// How to operate on just part of the state.
+/// Self is the state of an FSM and T
+/// is a view of that state of interest to
+/// some Event or Command.
+trait Lens<T> {
+    /// Extract a view of state.
+    fn extract(&self) -> &T;
+
+    /// Update state to accord with a view.
+    fn inject(&self, view: T) -> Self;
 }
 
+/// Blanket implementation views the whole of Self
 impl<S> Lens<S> for S {
-    fn extract(state: &S) -> &Self {
-        state
+    fn extract(&self) -> &Self {
+        self
     }
 
-    fn inject(self, _: &S) -> S {
-        self
+    fn inject(&self, part: Self) -> Self {
+        part
     }
 }
 
@@ -56,9 +63,9 @@ trait Fsm<S, H> {
     fn for_command<C, T>(state: &S, command: &C, handler: &mut H) -> Option<C::Output>
     where
         C: Command<T, H>,
-        T: Lens<S>,
+        S: Lens<T>,
     {
-        command.execute(T::extract(state), handler)
+        command.execute(state.extract(), handler)
     }
 
     /// Given a state and event, produce a transition, which could transition to
@@ -67,10 +74,10 @@ trait Fsm<S, H> {
     fn for_event<E, T>(state: &S, event: &E) -> Transition<S>
     where
         E: Event<T>,
-        T: Lens<S>,
+        S: Lens<T>,
     {
-        match event.fire(T::extract(state)) {
-            Transition::Next(t) => Transition::Next(t.inject(state)),
+        match event.fire(state.extract()) {
+            Transition::Next(t) => Transition::Next(state.inject(t)),
             Transition::Same => Transition::Same,
         }
     }
