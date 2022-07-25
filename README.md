@@ -78,12 +78,13 @@ Given the devolution of individual state functions to their respective command a
 definitions, what is the purpose of the `FSM` trait?   
 
 It should be seen as the custodian of state.  Commands are submitted to an `FSM` to gain
-access to the state.  The `FSM` trait provides generic, principal state functions.
+access to the state.  The `FSM` trait provides generic, principal state functions and
+the `step` function to sequence them as a single iteration.
 
 The `FSM` trait also provides a hook to monitor state transitions and 
 generate effects based on them.
-
-Note: in the `MFSM` design the command and event that caused the transition are not available (their types are generic within the `FSM`).  
+Note: in the `MFSM` design the command and event that caused the transition 
+are not available (their types are generic within the `FSM`).  
 
 ## Command Channels
 
