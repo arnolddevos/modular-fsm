@@ -59,7 +59,7 @@ pub trait Command<S, H> {
 trait Fsm<S, H> {
     /// Given a state and command, optionally emit an event. Can perform side
     /// effects along the way. This function is generally only called from the
-    /// `run` function.
+    /// `step` function.
     fn for_command<C, T>(state: &S, command: &C, handler: &mut H) -> Option<C::Output>
     where
         C: Command<T, H>,
