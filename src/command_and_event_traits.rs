@@ -14,6 +14,22 @@ pub enum Transition<S> {
     Same,
 }
 
+/// How to operate on just part of the state
+trait Lens<S> {
+    fn extract(state: &S) -> &Self;
+    fn inject(self, state: &S) -> S;
+}
+
+impl<S> Lens<S> for S {
+    fn extract(state: &S) -> &Self {
+        state
+    }
+
+    fn inject(self, _: &S) -> S {
+        self
+    }
+}
+
 /// An event is something that may cause a state transition
 pub trait Event<S> {
     fn fire(&self, state: &S) -> Transition<S>;
@@ -21,9 +37,9 @@ pub trait Event<S> {
 
 /// A command executes an effect dependent on state and an effect handler.
 /// It may produce an event.
-pub trait Command<S, SE> {
+pub trait Command<S, H> {
     type Output: Event<S>;
-    fn execute(&self, state: &S, handler: &mut SE) -> Option<Self::Output>;
+    fn execute(&self, state: &S, handler: &mut H) -> Option<Self::Output>;
 }
 
 /// Describes the behavior of a Finite State Machine (FSM) that can receive commands and produce
@@ -32,51 +48,60 @@ pub trait Command<S, SE> {
 ///
 /// The generic types refer to:
 /// S  = State          - the state of your FSM
-/// SE = State Effect   - the effect handler, required by commands
-trait Fsm<S, SE> {
+/// H = State Effect   - the effect handler, required by commands
+trait Fsm<S, H> {
     /// Given a state and command, optionally emit an event. Can perform side
     /// effects along the way. This function is generally only called from the
     /// `run` function.
-    fn for_command<C>(s: &S, c: &C, se: &mut SE) -> Option<C::Output>
+    fn for_command<C, T>(state: &S, command: &C, handler: &mut H) -> Option<C::Output>
     where
-        C: Command<S, SE>,
+        C: Command<T, H>,
+        T: Lens<S>,
     {
-        c.execute(s, se)
+        command.execute(T::extract(state), handler)
     }
 
     /// Given a state and event, produce a transition, which could transition to
     /// the next state. No side effects are to be performed. Can be used to replay
     /// events to attain a new state i.e. the major function of event sourcing.
-    fn for_event<E>(s: &S, e: &E) -> Transition<S>
+    fn for_event<E, T>(state: &S, event: &E) -> Transition<S>
     where
-        E: Event<S>,
+        E: Event<T>,
+        T: Lens<S>,
     {
-        e.fire(s)
+        match event.fire(T::extract(state)) {
+            Transition::Next(t) => Transition::Next(t.inject(state)),
+            Transition::Same => Transition::Same,
+        }
     }
 
     /// Optional logic for when transitioning into a new state.
-    fn on_transition(_old_s: &S, _new_s: &S, _se: &mut SE) {}
+    fn on_transition(_old_s: &S, _new_s: &S, _h: &mut H) {}
 
     /// This is the main entry point to the event driven FSM.
     /// Runs the state machine for a command, optionally performing effects,
     /// producing an event and transitioning to a new state. Also
     /// applies any "Entry/" or "Exit/" processing when arriving
     /// at a new state.
-    fn step<C>(s: &S, c: &C, se: &mut SE) -> (Option<<C as Command<S, SE>>::Output>, Transition<S>)
+    fn step<C>(
+        state: &S,
+        command: &C,
+        handler: &mut H,
+    ) -> (Option<<C as Command<S, H>>::Output>, Transition<S>)
     where
-        C: Command<S, SE>,
+        C: Command<S, H>,
     {
-        let e = Self::for_command(s, c, se);
-        let t = if let Some(e) = &e {
-            let t = Self::for_event(s, e);
-            if let Transition::Next(new_s) = &t {
-                Self::on_transition(s, new_s, se);
+        let result = Self::for_command(state, command, handler);
+        let trans = if let Some(event) = &result {
+            let trans = Self::for_event(state, event);
+            if let Transition::Next(new_s) = &trans {
+                Self::on_transition(state, new_s, handler);
             };
-            t
+            trans
         } else {
             Transition::Same
         };
-        (e, t)
+        (result, trans)
     }
 }
 
