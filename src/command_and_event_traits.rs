@@ -55,16 +55,7 @@ trait Fsm<S, SE> {
     }
 
     /// Optional logic for when transitioning into a new state.
-    fn on_transition<C>(
-        _old_s: &S,
-        _new_s: &S,
-        _c: &C,
-        _e: &<C as Command<S, SE>>::Output,
-        _se: &mut SE,
-    ) where
-        C: Command<S, SE>,
-    {
-    }
+    fn on_transition(_old_s: &S, _new_s: &S, _se: &mut SE) {}
 
     /// This is the main entry point to the event driven FSM.
     /// Runs the state machine for a command, optionally performing effects,
@@ -79,7 +70,7 @@ trait Fsm<S, SE> {
         let t = if let Some(e) = &e {
             let t = Self::for_event(s, e);
             if let Transition::Next(new_s) = &t {
-                Self::on_transition(s, new_s, c, e, se);
+                Self::on_transition(s, new_s, se);
             };
             t
         } else {
@@ -177,15 +168,7 @@ mod tests {
             // Let's implement this optional function to show how entry/exit
             // processing can be achieved, and also confirm that our FSM is
             // calling it.
-            fn on_transition<C>(
-                old_s: &State,
-                new_s: &State,
-                _c: &C,
-                _e: &<C as super::Command<State, EffectHandlers>>::Output,
-                se: &mut EffectHandlers,
-            ) where
-                C: super::Command<State, EffectHandlers>,
-            {
+            fn on_transition(old_s: &State, new_s: &State, se: &mut EffectHandlers) {
                 match (old_s, new_s) {
                     (State::Started, State::Stopped) => se.transitioned_started_to_stopped(),
                     (State::Stopped, State::Started) => se.transitioned_stopped_to_started(),
@@ -337,15 +320,7 @@ mod tests {
             // Let's implement this optional function to show how entry/exit
             // processing can be achieved, and also confirm that our FSM is
             // calling it.
-            fn on_transition<C>(
-                old_s: &State,
-                new_s: &State,
-                _c: &C,
-                _e: &<C as super::Command<State, EffectHandlers>>::Output,
-                se: &mut EffectHandlers,
-            ) where
-                C: super::Command<State, EffectHandlers>,
-            {
+            fn on_transition(old_s: &State, new_s: &State, se: &mut EffectHandlers) {
                 match (old_s, new_s) {
                     (State::Started, State::Stopped) => se.transitioned_started_to_stopped(),
                     (State::Stopped, State::Started) => se.transitioned_stopped_to_started(),
