@@ -8,17 +8,17 @@ which are iterated to evolve a state:
 (Event, State) -> State // a pure state transition
 ```
 
-We refer to these as command and event _handling functions_, resp.
+We refer to these as _state functions_.
 In the most direct implementation, `Command`, `Event` and `State` 
 are all concrete types, typically `enum` types.
 
-In a very large FSM these two principal handling functions divide
-the enum cases and delegate to a number of smaller handling
+In a very large FSM these two principal state functions divide
+the enum cases and delegate to a number of smaller state
 functions.
 
 The issue is that any change in the specification of the FSM implies
 a change to one or more of the three principal types.
-That can then have widespread consequences in the handling functions.
+That can then have widespread consequences in the state functions.
 Inevitably, these impacts will go beyond the areas
 directly concerned with the specified change.
 
@@ -28,9 +28,9 @@ A _Modular Finite State Machine_ (MFSM) relies on traits
 rather than enums to define commands and events. 
 Each command (or event) consists of a distinct concrete type and 
 an implementation of the `Command` (or `Event`) trait. 
-This provides the handling function for that particular command (or event). 
+This provides the state function for that particular command (or event). 
 
-The principal handling functions still delegate to these smaller
+The principal state functions still delegate to these smaller
 functions but the principal functions are now generic. 
 They do not evolve when new commands and events are defined. 
 They are the same for every MFSM.  
@@ -51,7 +51,7 @@ An efficient, blanket `Lens` implementation views the whole of the state.
 A command or event is always defined over a view of the state.
 It may be the blanket view, but a narrower view will insulate the 
 command or event from unrelated changes to the state type. 
-Each handling function can be simpler with a view and avoid the need
+Each state function can be simpler because it avoids the need
 to deconstruct and reconstruct the whole state.
 
 However, there is no free lunch.  The global state must
@@ -70,15 +70,15 @@ Notifications can create duplications between command types and event types.
 In the extreme, for each command type there is a similar, corresponding event type.
 
 In the MFSM design a notification is best defined by implementing both `Command` and `Event` 
-for one type.  If the command is run, the handler should return it as a notfication.  
+for one type.  If the command is run, the state function should return it as a notfication.  
 
 ## The FSM trait
 
-Given the devolution of individual handling functions to their respective command and event
+Given the devolution of individual state functions to their respective command and event
 definitions, what is the purpose of the `FSM` trait?   
 
 It should be seen as the custodian of state.  Commands are submitted to an `FSM` to gain
-access to the state.  The `FSM` trait provides generic, principal handling functions.
+access to the state.  The `FSM` trait provides generic, principal state functions.
 
 The `FSM` trait also provides a hook to monitor state transitions and 
 generate effects based on them.

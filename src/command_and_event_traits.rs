@@ -26,7 +26,7 @@ trait Lens<T> {
     fn inject(&self, view: T) -> Self;
 }
 
-/// Blanket implementation views the whole of Self
+/// THis blanket implementation views the whole of the state.
 impl<S> Lens<S> for S {
     fn extract(&self) -> &Self {
         self
@@ -42,7 +42,7 @@ pub trait Event<S> {
     fn fire(&self, state: &S) -> Transition<S>;
 }
 
-/// A command executes an effect dependent on state and an effect handler.
+/// A command executes an effect dependent on state using an effect handler.
 /// It may produce an event.
 pub trait Command<S, H> {
     type Output: Event<S>;
