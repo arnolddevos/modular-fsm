@@ -16,11 +16,24 @@ In a very large FSM these two principal state functions divide
 the enum cases and delegate to a number of smaller state
 functions.
 
+## The Problem
+
 The issue is that any change in the specification of the FSM implies
 a change to one or more of the three principal types.
+
 That can then have widespread consequences in the state functions.
 Inevitably, these impacts will go beyond the areas
 directly concerned with the specified change.
+
+For example, in one project the FSM required ~1400 loc with a further
+~2800 loc for tests. Adding a member to the `State` type typically 
+required a ~2000 loc diff. 
+
+(Examples surveyed varied between ~1600 and ~3300 loc.)
+
+The proposition here is that coupling accross this code base 
+can be reduced by introducing traits and making the principal
+state functions generic.
 
 ## Modularity with Command and Event Traits
 
@@ -39,7 +52,7 @@ As there are no global command and event types, defining new
 commands and events need not impact any existing definitions.
 Definitions can be easily organised into separate modules. 
 
-## Views on State
+## Views on State with the Lens Trait
 
 The MFSM design uses another trait, `Lens`, to decouple command
 and event definitions from the state type.
@@ -60,6 +73,9 @@ The idea is that it still clearer to separate this logic from commands and event
 the impact of changes is more contained; and several commands and events 
 may share the same view of state, reducing duplication. 
 
+The `Lens` trait codifies methods that are sometimes defined on `State`
+to extract and update a partial state.
+
 ## Notifications
 
 Sometimes an event serves only to signal that a particular command has been executed,
@@ -71,6 +87,18 @@ In the extreme, for each command type there is a similar, corresponding event ty
 
 In the MFSM design a notification is best defined by implementing both `Command` and `Event` 
 for one type.  If the command is run, the state function should return it as a notfication.  
+
+## Testing
+
+The MFSM approach ought to simplify testing in the same way it simplifies state functions.  
+
+The biggest contribution to FSM test code is boilerplate to construct an initial and final state.  
+This boilerplate must be updated whenever something is added or changed in the state type.   
+
+The MFSM approach is to provide a separate test for each `Lens` implementation as well as each
+`Command`.  The former are affected by changes in the state type but not necessarily the latter. 
+Command tests involve more manageable initial and final view values.  
+They can be easily organised into modules along with the commands.
 
 ## The FSM trait
 
