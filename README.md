@@ -1,14 +1,41 @@
 # Ideas for taming Finite State Machines
 
-In our model of a _Finite State Machine_ there are two functions
-which are iterated to evolve a state:
+My colleague @huntc has developed [a rust macro](https://github.com/titanclass/edfsm) 
+that provides a Domain Specific Language (DSL) mapping directly from a 
+Finite State Machine description (FSM) to code.
+
+While he was developing this I harassed him by questioning the approach and
+making gratuitous suggestions.   He succeeded anyway.
+
+As is often the case with macro code, there is an alternative using generics.
+This the that alternative.
+
+Both the macro and the generics approach deal with maintainability problems 
+that are outlined below. 
+
+To save you time: in the end the macro-driven DSL is better because:
+
+- You have a succinct high level description of the FSM which is easy to read. 
+- Other artifacts, such as diagrams, can be produced from this.
+- A single type represents all commands and similarly there is a single type for events. 
+  It is easy to log them and send them over channels. 
+
+Roll credits.  But wait, maybe one day there will be a sequel where the generics approach returns.
+
+## The Finite State Machine
+
+The FSM model we are using is 
+[described](http://christopherhunt-software.blogspot.com/2021/02/event-driven-finite-state-machines.html) 
+by @huntc.
+
+There are two functions which are iterated to evolve a state:
 
 ```rust
 (Command, State) -> Event // performs a side effect
 (Event, State) -> State // a pure state transition
 ```
 
-We refer to these as _state functions_.
+Let's refer to these as _state functions_.
 In the most direct implementation, `Command`, `Event` and `State` 
 are all concrete types, typically `enum` types.
 
@@ -16,12 +43,28 @@ In a very large FSM these two principal state functions divide
 the enum cases and delegate to a number of smaller state
 functions.
 
+### Sidebar: Commands versus Events
+
+The Wikipedia entry on [FSMs](https://en.wikipedia.org/wiki/Finite-state_machine) does not 
+distinguish different kinds of inputs to an FSM.  Terms _input_, _event_ and 
+(less frequently) _command_ are used for the same thing. 
+
+But the _Event Driven_ FSM strictly separates state transitions driven by events, 
+from effects driven by commands. Why?
+
+It is for _event sourcing_.
+
+Events can be logged locally or sent across a network and then replayed to reproduce states
+remote in time or space from the original FSM.  This can be done without generating side effects.
+Only the second state function is used for event sourcing and it is a pure function. 
+
 ## The Problem
 
-The issue is that any change in the specification of the FSM implies
+A change in the specification of the FSM usually implies
 a change to one or more of the three principal types.
 
-That can then have widespread consequences in the state functions.
+The issue with a direct approach to implementing a FSM
+is that the change can then have widespread consequences in the state functions.
 Inevitably, these impacts will go beyond the areas
 directly concerned with the specified change.
 
@@ -31,7 +74,7 @@ required a ~2000 loc diff.
 
 (Examples surveyed varied between ~1600 and ~3300 loc.)
 
-The proposition here is that coupling accross this code base 
+The proposition here is that coupling across this code base 
 can be reduced by introducing traits and making the principal
 state functions generic.
 
@@ -86,7 +129,7 @@ Notifications can create duplications between command types and event types.
 In the extreme, for each command type there is a similar, corresponding event type.
 
 In the MFSM design a notification is best defined by implementing both `Command` and `Event` 
-for one type.  If the command is run, the state function should return it as a notfication.  
+for one type.  If the command is run, the state function should return it as a notification.  
 
 ## Testing
 
