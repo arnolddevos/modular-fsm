@@ -1,6 +1,7 @@
 # Ideas for taming Finite State Machines
 
-My colleague @huntc has developed [a rust macro](https://github.com/titanclass/edfsm) 
+My colleague [huntc](https://github.com/huntc) has 
+developed [a rust macro](https://github.com/titanclass/edfsm) 
 that provides a Domain Specific Language (DSL) mapping directly from a 
 Finite State Machine description (FSM) to code.
 
@@ -24,9 +25,9 @@ Roll credits.  But wait, maybe one day there will be a sequel where the generics
 
 ## The Finite State Machine
 
-The FSM model we are using is 
-[described](http://christopherhunt-software.blogspot.com/2021/02/event-driven-finite-state-machines.html) 
-by @huntc.
+The FSM model we are using has been 
+[fully described](http://christopherhunt-software.blogspot.com/2021/02/event-driven-finite-state-machines.html) 
+by my colleague. 
 
 There are two functions which are iterated to evolve a state:
 
@@ -61,10 +62,12 @@ Only the second state function is used for event sourcing and it is a pure funct
 ## The Problem
 
 A change in the specification of the FSM usually implies
-a change to one or more of the three principal types.
+a change to one or more of the three principal types, 
+`Command`, `Event` and `State`.
 
 The issue with a direct approach to implementing a FSM
-is that the change can then have widespread consequences in the state functions.
+is that the a change here can have widespread consequences 
+in the state functions.
 Inevitably, these impacts will go beyond the areas
 directly concerned with the specified change.
 
@@ -75,8 +78,8 @@ required a ~2000 loc diff.
 (Examples surveyed varied between ~1600 and ~3300 loc.)
 
 The proposition here is that coupling across this code base 
-can be reduced by introducing traits and making the principal
-state functions generic.
+can be reduced by introducing traits for `Command`, `Event` and `State`
+and making the main state functions generic.
 
 ## Modularity with Command and Event Traits
 
