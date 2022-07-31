@@ -1,9 +1,9 @@
-/// Event driven Finite State Machines process commands (possibly created by other
-/// events), performing some side effect, and emitting events.
-/// Commands are processed against a provided state. Events can be applied to states
-/// to yield new states.
-///
-/// For more background on [Event-driven Finite State Machines](http://christopherhunt-software.blogspot.com/2021/02/event-driven-finite-state-machines.html).
+//! Event driven Finite State Machines process commands (possibly created by other
+//! events), performing some side effect, and emitting events.
+//! Commands are processed against a provided state. Events can be applied to states
+//! to yield new states.
+//!
+//! For more background on [Event-driven Finite State Machines](http://christopherhunt-software.blogspot.com/2021/02/event-driven-finite-state-machines.html).
 
 /// Describes how to transition from one state to another
 #[derive(Debug, PartialEq)]
