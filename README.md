@@ -65,10 +65,10 @@ A change in the specification of the FSM usually implies
 a change to one or more of the three principal types, 
 `Command`, `Event` and `State`.
 
-The issue with a direct approach to implementing a FSM
-is that the a change here can have widespread consequences 
-in the state functions.
-Inevitably, these impacts will go beyond the areas
+The issue with a direct approach to implementing an FSM
+is that a change to these types can have widespread 
+consequences.
+Inevitably, the impacts will go beyond the areas
 directly concerned with the specified change.
 
 For example, in one project the FSM required ~1400 loc with a further
